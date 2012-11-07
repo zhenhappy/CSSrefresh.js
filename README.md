@@ -19,5 +19,8 @@ and include it in your webpage:
    <script type="text/javascript" src="js/cssrefresh.js"></script>
 </head>
 ```
+## Credits
+All work so far is done by Fred http://cssrefresh.frebsite.nl/ .
+This will maybe developed further by me or Fred himself. Check out his website.
 
 Note: Only CSS-files included before the CSSrefresh-file will be refreshed.
