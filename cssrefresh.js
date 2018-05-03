@@ -9,134 +9,60 @@
  *	http://en.wikipedia.org/wiki/GNU_General_Public_License
  */
 
-(function() {
-
-	var phpjs = {
-
-		array_filter: function( arr, func )
-		{
-			var retObj = {}; 
-			for ( var k in arr )
-			{
-				if ( func( arr[ k ] ) )
-				{
-					retObj[ k ] = arr[ k ];
-				}
-			}
-			return retObj;
-		},
-		filemtime: function( file )
-		{
-			var headers = this.get_headers( file, 1 );
-			return ( headers && headers[ 'Last-Modified' ] && Date.parse( headers[ 'Last-Modified' ] ) / 1000 ) || false;
-	    },
-	    get_headers: function( url, format )
-	    {
-			var req = window.ActiveXObject ? new ActiveXObject( 'Microsoft.XMLHTTP' ) : new XMLHttpRequest();
-			if ( !req )
-			{
-				throw new Error('XMLHttpRequest not supported.');
-			}
-
-			var tmp, headers, pair, i, j = 0;
-
-			try
-			{
-				req.open( 'HEAD', url, false );
-				req.send( null ); 
-				if ( req.readyState < 3 )
-				{
-					return false;
-				}
-				tmp = req.getAllResponseHeaders();
-				tmp = tmp.split( '\n' );
-				tmp = this.array_filter( tmp, function ( value )
-				{
-					return value.toString().substring( 1 ) !== '';
-				});
-				headers = format ? {} : [];
-	
-				for ( i in tmp )
-				{
-					if ( format )
-					{
-						pair = tmp[ i ].toString().split( ':' );
-						headers[ pair.splice( 0, 1 ) ] = pair.join( ':' ).substring( 1 );
-					}
-					else
-					{
-						headers[ j++ ] = tmp[ i ];
-					}
-				}
-	
-				return headers;
-			}
-			catch ( err )
-			{
-				return false;
-			}
-		}
-	};
-
-	var cssRefresh = function() {
-
-		this.reloadFile = function( links )
-		{
-			for ( var a = 0, l = links.length; a < l; a++ )
-			{
-				var link = links[ a ],
-					newTime = phpjs.filemtime( this.getRandom( link.href ) );
-
-				//	has been checked before
-				if ( link.last )
-				{
-					//	has been changed
-					if ( link.last != newTime )
-					{
-						//	reload
-						link.elem.setAttribute( 'href', this.getRandom( this.getHref( link.elem ) ) );
-					}
-				}
-
-				//	set last time checked
-				link.last = newTime;
-			}
-			setTimeout( function()
-			{
-				this.reloadFile( links );
-			}, 1000 );
-		};
-
-		this.getHref = function( f )
-		{
-			return f.getAttribute( 'href' ).split( '?' )[ 0 ];
-		};
-		this.getRandom = function( f )
-		{
-			return f + '?x=' + Math.random();
-		};
-
-
-		var files = document.getElementsByTagName( 'link' ),
-			links = [];
-
-		for ( var a = 0, l = files.length; a < l; a++ )
-		{			
-			var elem = files[ a ],
-				rel = elem.rel;
-			if ( typeof rel != 'string' || rel.length == 0 || rel == 'stylesheet' )
-			{
-				links.push({
-					'elem' : elem,
-					'href' : this.getHref( elem ),
-					'last' : false
-				});
-			}
-		}
-		this.reloadFile( links );
-	};
-
-
-	cssRefresh();
-
-})();
+(function () {
+  var utils = {
+    getRandom: function (link) {
+      return link + '?x=' + Math.random()
+    },
+    getHash: function (str) {
+      var hash = 1315423911, i, ch
+      for (i = str.length - 1; i >= 0; i--) {
+        ch = str.charCodeAt(i)
+        hash ^= ((hash << 5) + ch + (hash >> 2))
+      }
+      return (hash & 0x7FFFFFFF)
+    },
+    getFile: function (url, callback) {
+      var xhr = window.ActiveXObject ? new ActiveXObject('Microsoft.XMLHTTP') : new XMLHttpRequest()
+      if (!xhr) throw new Error('XMLHttpRequest not supported.')
+      try {
+        xhr.open('GET', url)
+        xhr.onreadystatechange = function () {
+          if (xhr.readyState === 4) {
+            if (xhr.status === 200) callback(xhr.responseText)
+            else callback(false)
+          }
+        }
+        xhr.send(null)
+      } catch (err) {
+        return false
+      }
+    },
+    getLinks: function () {
+      var files = document.getElementsByTagName('link'), links = []
+      for (var i = 0; i < files.length; i++) {
+        var elem = files[i], rel = elem.rel
+        if (typeof rel !== 'string' || rel.length === 0 || rel === 'stylesheet') links.push({
+          'elem': elem,
+          'href': elem.getAttribute('href').split('?')[0],
+          'hash': false
+        })
+      }
+      return links
+    }
+  }
+  var cssRefresh = function (links) {
+    for (var i = 0; i < links.length; i++) {
+      var link = links[i]
+      utils.getFile(utils.getRandom(link.href), function (file) {
+        var hash = utils.getHash(file)
+        if (link.hash && link.hash !== hash) link.elem.setAttribute('href', utils.getRandom(link.href))
+        link.hash = hash
+      })
+    }
+    setTimeout(function () {
+      cssRefresh(links)
+    }, 1000)
+  }
+  cssRefresh(utils.getLinks())
+})()
